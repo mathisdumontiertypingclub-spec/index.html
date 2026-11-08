@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CinéMax</title>
+<style>
+:root{--bg:#0b0b0f;--panel:#17171d;--tx:#f3f3f5;--mut:#9a9aa6;--red:#e50914;--line:#2a2a33}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:rgba(11,11,15,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.logo{color:var(--red);font-weight:800;font-size:24px;letter-spacing:1px}
+button{font:inherit;cursor:pointer;border:0;border-radius:6px;padding:9px 14px;background:var(--red);color:#fff;font-weight:600}
+button.g{background:#2b2b35}
+button.sm{padding:5px 9px;font-size:12px}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding:12px 18px}
+.tabs button{background:#22222b;white-space:nowrap}
+.tabs button.on{background:var(--tx);color:#000}
+.row{padding:6px 18px 10px}
+.row h2{margin:10px 0 8px;font-size:20px}
+.strip{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px}
+.card{flex:0 0 160px;height:230px;border-radius:8px;padding:10px;display:flex;flex-direction:column;justify-content:flex-end;cursor:pointer;position:relative;overflow:hidden;border:1px solid var(--line);transition:transform .15s}
+.card:hover{transform:scale(1.05)}
+.card b{font-size:14px}
+.card small{color:#ddd;font-size:11px}
+.card .badge{position:absolute;top:8px;left:8px;background:var(--red);font-size:10px;padding:2px 6px;border-radius:4px}
+.empty{color:var(--mut);font-size:14px;padding:8px 0}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:20;display:none;align-items:center;justify-content:center;padding:16px}
+.modal.open{display:flex}
+.box{background:var(--panel);border-radius:12px;padding:18px;width:100%;max-width:620px;max-height:92vh;overflow-y:auto}
+.box h3{margin:0 0 12px}
+input,select,textarea{width:100%;padding:11px;margin:5px 0 10px;background:#0f0f14;color:var(--tx);border:1px solid var(--line);border-radius:6px;font:inherit}
+label{font-size:13px;color:var(--mut)}
+video{width:100%;border-radius:8px;background:#000;max-height:55vh}
+.ep{display:block;width:100%;text-align:left;background:#22222b;margin:4px 0}
+.ep.on{background:var(--red)}
+.seas{display:flex;gap:6px;overflow-x:auto;margin:10px 0 4px}
+.seas button{background:#22222b;white-space:nowrap}
+.seas button.on{background:var(--tx);color:#000}
+.note{font-size:12px;color:var(--mut);margin:0 0 10px}
+.item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.hide{display:none!important}
+.hero{padding:26px 18px 8px}.hero h1{margin:0 0 6px;font-size:28px}.hero p{margin:0;color:var(--mut)}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">CINÉMAX</div>
+  <button class="g" id="adminBtn">⚙ Admin</button>
+</header>
+<div class="hero"><h1>Bienvenue</h1><p>Films et séries, par catégorie.</p><p id="st" style="font-size:12px;margin-top:6px"></p></div>
+<div class="tabs" id="tabs"></div>
+<div id="rows"></div>
+
+<div class="modal" id="player"><div class="box">
+  <video id="vid" controls playsinline></video>
+  <h3 id="pt" style="margin-top:12px"></h3>
+  <p id="pd" style="color:var(--mut);font-size:14px"></p>
+  <div class="seas" id="seas"></div>
+  <div id="eps"></div>
+  <button class="g" onclick="closeP()" style="width:100%;margin-top:10px">Fermer</button>
+</div></div>
+
+<div class="modal" id="codeM"><div class="box">
+  <h3>Panel administrateur</h3>
+  <label>Code d’accès</label><input id="ac" type="password" inputmode="numeric" placeholder="••••••">
+  <p id="aerr" style="color:#ff6b6b;font-size:13px"></p>
+  <button id="acOk" style="width:100%">Entrer</button>
+  <button class="g" onclick="hideM('codeM')" style="width:100%;margin-top:8px">Annuler</button>
+</div></div>
+
+<div class="modal" id="admin"><div class="box">
+  <h3>Ajouter un contenu</h3>
+  <label>Type</label><select id="at"><option value="film">Film</option><option value="serie">Série (saisons et épisodes)</option></select>
+  <div id="catBox"><label>Rubrique</label><select id="acat"></select></div>
+  <div id="serBox" class="hide"><label>Série</label><select id="aser"></select>
+  <label>Numéro de la saison (1, 2, 3…)</label><input id="asn" type="number" min="1" value="1"></div>
+  <div id="newInfo"><label>Titre</label><input id="atitle">
+  <label>Description</label><textarea id="adesc" rows="3"></textarea></div>
+  <label id="flab">Fichier vidéo</label><input id="afile" type="file" accept="video/*">
+  <label>Image d’affiche (optionnel)</label><input id="aposter" type="file" accept="image/*">
+  <p class="note">Série : choisissez « Nouvelle série » ou une série existante, indiquez la saison, puis sélectionnez tous les épisodes d’un coup (classés par nom de fichier).</p>
+  <button id="upBtn" style="width:100%">Publier</button>
+  <p id="ast" class="note"></p>
+  <h3 style="margin-top:18px">Contenus publiés</h3>
+  <div id="alist"></div>
+  <button class="g" onclick="hideM('admin')" style="width:100%;margin-top:12px">Fermer</button>
+</div></div>
+<input type="file" id="moreEp" accept="video/*" multiple class="hide">
+<input type="file" id="posterEdit" accept="image/*" class="hide">
+
+<script>
+const CATS=["Comédie","Policier","Action","Horreur","Séries"];
+const COLORS={"Comédie":["#f5a623","#b35c00"],"Policier":["#3b6ea8","#12263f"],"Action":["#d6402a","#5c1208"],"Horreur":["#5b2a86","#14061f"],"Séries":["#2a9d8f","#0b3d3a"]};
+const ADMIN_CODE="210511";
+const $=id=>document.getElementById(id);
+const showM=id=>$(id).classList.add("open"),hideM=id=>$(id).classList.remove("open");
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let films=[],cat="Tout",isAdmin=false,pendingMore=null,pendingPoster=null,curF=null,curI=0,lastSave=0,prog={};
+try{prog=JSON.parse(localStorage.getItem("cm_prog")||"{}")}catch(e){}
+
+/* ---------- Stockage (IndexedDB : sans limite de 20 Mo) ---------- */
+let DB;
+const open=()=>new Promise((res,rej)=>{const r=indexedDB.open("cinemax",2);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains("films"))d.createObjectStore("films",{keyPath:"id"});if(!d.objectStoreNames.contains("meta"))d.createObjectStore("meta")};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const store=(m,n="films")=>DB.transaction(n,m).objectStore(n);
+const req=r=>new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const loadAll=async()=>{films=(await req(store("readonly").getAll())).sort((a,b)=>b.at-a.at);films.forEach(f=>{if(!f.seasons){f.seasons=[{n:1,episodes:f.episodes||[]}];delete f.episodes}if(f.type==="serie")f.cat="Séries"});render();status()};
+async function status(){let p=false;try{p=await navigator.storage.persisted()}catch(e){}$("st").textContent="💾 "+films.length+" contenu(s) enregistré(s) dans ce navigateur"+(p?" · stockage permanent ✅":"")}
+const putF=async f=>{await req(store("readwrite").put(f));await loadAll()};
+const delF=async id=>{await req(store("readwrite").delete(id));await loadAll()};
+const urls=new WeakMap();
+const url=b=>{if(!b)return"";if(!urls.has(b))urls.set(b,URL.createObjectURL(b));return urls.get(b)};
+const bg=(f,a,b)=>f.poster?`background:linear-gradient(0deg,rgba(0,0,0,.85),rgba(0,0,0,.05) 60%),url(${url(f.poster)}) center/cover`:`background:linear-gradient(160deg,${a},${b})`;
+
+/* ---------- Affichage ---------- */
+function render(){
+  $("tabs").innerHTML=["Tout",...CATS].map(c=>`<button class="${c===cat?"on":""}" data-c="${c}">${c}</button>`).join("");
+  $("tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{cat=b.dataset.c;render()});
+  const list=cat==="Tout"?CATS:[cat];
+  $("rows").innerHTML=list.map(c=>{
+    const items=films.filter(f=>f.cat===c);
+    return `<div class="row"><h2>${c}</h2>`+(items.length?`<div class="strip">${items.map(f=>{const [a,b]=COLORS[c];return `<div class="card" data-id="${f.id}" style="${bg(f,a,b)}"><span class="badge">${f.type==="serie"?"SÉRIE":"FILM"}</span><b>${esc(f.title)}</b><small>${f.type==="serie"?f.seasons.length+" saison(s)":"Film"}</small></div>`}).join("")}</div>`:`<div class="empty">Aucun contenu pour l’instant.</div>`)+`</div>`;
+  }).join("");
+  $("rows").querySelectorAll(".card").forEach(c=>c.onclick=()=>openP(c.dataset.id));
+  if(isAdmin)renderAdminList();
+}
+
+/* ---------- Lecteur + reprise ---------- */
+function saveProg(force){
+  if(!curF)return;const v=$("vid");
+  prog[curF.id+"_"+curI]=v.ended?0:Math.floor(v.currentTime);
+  const now=Date.now();if(!force&&now-lastSave<2000)return;lastSave=now;prog._ts=now;
+  try{localStorage.setItem("cm_prog",JSON.stringify(prog))}catch(e){}
+  try{if(DB)store("readwrite","meta").put(prog,"prog")}catch(e){}
+}
+$("vid").ontimeupdate=()=>saveProg(false);
+$("vid").onpause=()=>saveProg(true);
+$("vid").onended=()=>saveProg(true);
+addEventListener("pagehide",()=>saveProg(true));addEventListener("beforeunload",()=>saveProg(true));
+document.addEventListener("visibilitychange",()=>{if(document.hidden)saveProg(true)});
+function openP(id){
+  const f=films.find(x=>x.id===id);if(!f)return;
+  $("pt").textContent=f.title;$("pd").textContent=f.desc||"";$("vid").poster=f.poster?url(f.poster):"";
+  const serie=f.type==="serie";
+  const play=(sn,i)=>{
+    const sea=f.seasons.find(x=>x.n===sn),e=sea&&sea.episodes[i];if(!e)return;
+    if(curF)saveProg(true);curF=f;curI=sn+"_"+i;prog[f.id+"_last"]=sn+":"+i;
+    $("vid").onloadedmetadata=()=>{const t=prog[f.id+"_"+sn+"_"+i]||0;if(t>2&&t<$("vid").duration-5)$("vid").currentTime=t};
+    $("vid").onended=()=>{saveProg(true);play(sn,i+1)};
+    $("vid").src=url(e.blob);$("vid").play().catch(()=>{});
+    draw(sn,i);
+  };
+  const draw=(sn,cur)=>{
+    if(!serie){$("seas").innerHTML="";$("eps").innerHTML="";return}
+    $("seas").innerHTML=f.seasons.map(x=>`<button class="${x.n===sn?"on":""}" data-s="${x.n}">Saison ${x.n}</button>`).join("");
+    $("seas").querySelectorAll("button").forEach(b=>b.onclick=()=>draw(+b.dataset.s,-1));
+    const sea=f.seasons.find(x=>x.n===sn);
+    $("eps").innerHTML=sea.episodes.map((e,i)=>`<button class="ep ${i===cur?"on":""}" data-i="${i}">${esc(e.title)}</button>`).join("");
+    $("eps").querySelectorAll(".ep").forEach(b=>b.onclick=()=>play(sn,+b.dataset.i));
+  };
+  const l=(prog[f.id+"_last"]||"1:0").split(":");let sn=+l[0],i=+l[1]||0;
+  if(!f.seasons.some(x=>x.n===sn)){sn=f.seasons[0].n;i=0}
+  play(sn,i);showM("player");
+}
+function closeP(){saveProg(true);curF=null;$("vid").pause();$("vid").removeAttribute("src");hideM("player")}
+
+/* ---------- Admin ---------- */
+$("adminBtn").onclick=()=>{if(isAdmin)openAdmin();else{$("ac").value="";$("aerr").textContent="";showM("codeM")}};
+$("acOk").onclick=()=>{if($("ac").value===ADMIN_CODE){isAdmin=true;hideM("codeM");openAdmin()}else $("aerr").textContent="Code incorrect."};
+$("ac").onkeydown=e=>{if(e.key==="Enter")$("acOk").click()};
+function fillSer(){const v=$("aser").value;$("aser").innerHTML='<option value="new">➕ Nouvelle série</option>'+films.filter(f=>f.type==="serie").map(f=>`<option value="${f.id}">${esc(f.title)}</option>`).join("");if([...$("aser").options].some(o=>o.value===v))$("aser").value=v}
+function toggleSer(){$("newInfo").classList.toggle("hide",$("at").value==="serie"&&$("aser").value!=="new")}
+function toggleType(){const sr=$("at").value==="serie";$("afile").multiple=sr;$("flab").textContent=sr?"Fichiers des épisodes (plusieurs possibles)":"Fichier vidéo";$("serBox").classList.toggle("hide",!sr);$("catBox").classList.toggle("hide",sr);toggleSer()}
+function openAdmin(){$("acat").innerHTML=CATS.filter(c=>c!=="Séries").map(c=>`<option>${c}</option>`).join("");toggleType();renderAdminList();showM("admin")}
+$("at").onchange=toggleType;$("aser").onchange=toggleSer;
+const byName=(a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true});
+function renderAdminList(){
+  fillSer();
+  $("alist").innerHTML=films.length?films.map(f=>`<div class="item"><span>${esc(f.title)} <small style="color:var(--mut)">· ${f.cat}${f.type==="serie"?" · "+f.seasons.map(x=>"S"+x.n+" ("+x.episodes.length+" ép.)").join(", "):""}</small></span><span><button class="g sm" data-poster="${f.id}">🖼 Affiche</button> ${f.type==="serie"?`<button class="g sm" data-more="${f.id}">+ saison/ép.</button> `:""}<button class="sm" data-del="${f.id}">Suppr.</button></span></div>`).join(""):`<div class="empty">Rien pour l’instant.</div>`;
+  $("alist").querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{if(confirm("Supprimer ce contenu ?"))delF(b.dataset.del)});
+  $("alist").querySelectorAll("[data-poster]").forEach(b=>b.onclick=()=>{pendingPoster=b.dataset.poster;$("posterEdit").click()});
+  $("alist").querySelectorAll("[data-more]").forEach(b=>b.onclick=()=>{const n=parseInt(prompt("Numéro de la saison ? (1, 2, 3…)","1"));if(!n)return;pendingMore={id:b.dataset.more,n};$("moreEp").click()});
+}
+function addEps(f,n,files){
+  let sea=f.seasons.find(x=>x.n===n);if(!sea){sea={n,episodes:[]};f.seasons.push(sea);f.seasons.sort((a,b)=>a.n-b.n)}
+  files.sort(byName).forEach(x=>sea.episodes.push({title:"Épisode "+(sea.episodes.length+1),blob:x}));
+}
+$("upBtn").onclick=async()=>{
+  const type=$("at").value,files=[...$("afile").files].sort(byName),sid=$("aser").value;
+  const existing=type==="serie"&&sid!=="new"?films.find(x=>x.id===sid):null;
+  const title=existing?existing.title:$("atitle").value.trim();
+  if(!title||!files.length){alert("Titre et fichier requis.");return}
+  try{
+    $("ast").textContent="Enregistrement…";const pf=$("aposter").files[0]||null;
+    if(type==="film")await putF({id:"f"+Date.now(),title,desc:$("adesc").value.trim(),cat:$("acat").value,type,seasons:[{n:1,episodes:[{title,blob:files[0]}]}],poster:pf,at:Date.now()});
+    else{
+      const f=existing||{id:"f"+Date.now(),title,desc:$("adesc").value.trim(),cat:"Séries",type:"serie",seasons:[],poster:null,at:Date.now()};
+      if(pf)f.poster=pf;addEps(f,Math.max(1,parseInt($("asn").value)||1),files);await putF(f);
+    }
+    $("atitle").value="";$("adesc").value="";$("afile").value="";$("aposter").value="";$("ast").textContent="✅ Publié !";
+  }catch(e){$("ast").textContent="Erreur : "+(e&&e.message||"échec de l’enregistrement")}
+};
+$("moreEp").onchange=async()=>{
+  const f=pendingMore&&films.find(x=>x.id===pendingMore.id),files=[...$("moreEp").files];if(!f||!files.length)return;
+  addEps(f,pendingMore.n,files);
+  try{await putF(f);$("ast").textContent="✅ Saison "+pendingMore.n+" mise à jour"}catch(e){$("ast").textContent="Erreur : "+e.message}
+  $("moreEp").value="";
+};
+$("posterEdit").onchange=async()=>{
+  const p=$("posterEdit").files[0],f=films.find(x=>x.id===pendingPoster);if(!p||!f)return;
+  f.poster=p;try{await putF(f);$("ast").textContent="✅ Affiche mise à jour"}catch(e){$("ast").textContent="Erreur : "+e.message}
+  $("posterEdit").value="";
+};
+
+/* ---------- Démarrage ---------- */
+(async()=>{
+  try{DB=await open();try{if(navigator.storage&&navigator.storage.persist)await navigator.storage.persist()}catch(e){}
+    try{const m=await req(store("readonly","meta").get("prog"));if(m&&(m._ts||0)>(prog._ts||0))prog=m}catch(e){}
+    await loadAll()}
+  catch(e){render();alert("Le stockage du navigateur est indisponible (navigation privée ?).")}
+})();
+</script>
+</body>
+</html>
